@@ -6,7 +6,7 @@ hub: self
 # a GitHub App slug or a username to delegate, or an org/team-slug to
 # route the role to any member of a GitHub team.
 roles:
-  implementer: { identity: ~ }
-  reviewer: { identity: ~ }
-  qa: { identity: ~ }
-  doc-synthesizer: { identity: ~ }
+  implementer: { identity: radiusred-cody }
+  reviewer: { identity: radiusred-checky }
+  qa: { identity: radiusred-testy }
+  doc-synthesizer: { identity: radiusred-wordy }
