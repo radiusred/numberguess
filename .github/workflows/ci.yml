@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: node --check src/engine.js
+      # Deterministic smoke of the chartered API (M1-R1…M1-R4). The full
+      # test suite is M1-R5 and lands separately; `node --test` below picks
+      # it up automatically once test files exist.
+      - name: Smoke test
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import { newGame, guess, RESULTS } from './src/engine.js';
+
+          // M1-R1: shape, bounds, seeded determinism
+          const a = newGame(1, 100, 42);
+          assert.deepEqual(a, newGame(1, 100, 42));
+          assert.equal(a.attempts, 0);
+          assert.equal(a.status, 'playing');
+          for (let i = 0; i < 100; i++) {
+            const s = newGame(5, 10);
+            assert.ok(Number.isInteger(s.secret) && s.secret >= 5 && s.secret <= 10);
+          }
+
+          // M1-R2: new state each guess, input never mutated, attempts count, won
+          const before = JSON.stringify(a);
+          let state = a, result, attempts;
+          let lo = 1, hi = 100;
+          while (state.status === 'playing') {
+            const mid = Math.floor((lo + hi) / 2);
+            ({ state, result, attempts } = guess(state, mid));
+            if (result === RESULTS.TOO_LOW) lo = mid + 1;
+            else if (result === RESULTS.TOO_HIGH) hi = mid - 1;
+          }
+          assert.equal(state.status, 'won');
+          assert.equal(state.attempts, attempts);
+          assert.ok(attempts <= 7);
+          assert.equal(JSON.stringify(a), before);
+          assert.ok(Object.isFrozen(RESULTS));
+
+          // M1-R3: error paths
+          assert.throws(() => guess(newGame(1, 100, 1), 1.5), TypeError);
+          assert.throws(() => guess(newGame(1, 100, 1), 999), RangeError);
+          assert.throws(() => guess(state, 50), Error);
+          assert.throws(() => newGame(1.5, 100), TypeError);
+          assert.throws(() => newGame(1, 100, 1.5), TypeError);
+          assert.throws(() => newGame(100, 1), RangeError);
+
+          console.log('engine smoke OK');
+          EOF
+      - name: Unit tests (when present)
+        run: |
+          if ls test/*.js test/*.mjs 2>/dev/null | grep -q .; then
+            node --test
+          else
+            echo "no test files yet (M1-R5, owned by QA)"
+          fi
