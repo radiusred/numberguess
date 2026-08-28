@@ -14,9 +14,10 @@ cleanly end to end.
 Delivered: a pure, zero-dependency numberguess engine
 ([`src/engine.js`](../../src/engine.js), `newGame`/`guess`) and a 21-test
 suite (`test/engine.test.js`), each landed as its own small, independently
-reviewed GitHub PR. QA re-verified all requirements against merged `main`
-(commit `17883d9`) on 2026-08-28; every requirement is satisfied, closing the
-milestone once this document merges.
+reviewed GitHub PR. QA re-verified M1-R1–R5 against merged `main` (commit
+`17883d9`) on 2026-08-28 and found all five satisfied. M1-R6 — this record —
+is delivered by this PR and will be QA-verdicted after it merges, closing the
+milestone.
 
 ## Requirement outcomes
 
@@ -27,14 +28,18 @@ milestone once this document merges.
 | M1-R3 | Input validation: `TypeError`/`RangeError`/`Error` on the documented invalid inputs | Satisfied | [QA verdict](https://github.com/radiusred/numberguess/issues/3#issuecomment-5447045366) on #3, 2026-08-28T00:58:37Z |
 | M1-R4 | Pure module: no I/O, no UI, no runtime deps, no build step; Node ESM at `src/engine.js`, exported as package root | Satisfied | [QA verdict](https://github.com/radiusred/numberguess/issues/3#issuecomment-5447045366) on #3, 2026-08-28T00:58:37Z |
 | M1-R5 | Automated tests (implementer-authored, QA-verdicted) cover R1–R3 including determinism, immutability, attempt counting, and every error path | Satisfied — after re-charter ([Decision 1](#decisions)) and a second PR ([PR #6](https://github.com/radiusred/numberguess/pull/6)) | [QA verdict](https://github.com/radiusred/numberguess/issues/3#issuecomment-5447045366) on #3, 2026-08-28T00:58:37Z |
-| M1-R6 | Milestone record synthesized to `docs/milestones/1-core-engine.md` | Satisfied by this document | This PR |
+| M1-R6 | Milestone record synthesized to `docs/milestones/1-core-engine.md` | Delivered by this PR — pending QA verdict | This PR; QA verdict to follow once it merges |
 
 QA's [first pass](https://github.com/radiusred/numberguess/issues/3#issuecomment-5446807346)
 (2026-08-28T00:23:34Z) found M1-R1–R4 satisfied and M1-R5 not yet satisfied —
 not because the tests were wrong, but because they couldn't be published (see
 [Decision 1](#decisions)). The
 [second pass](https://github.com/radiusred/numberguess/issues/3#issuecomment-5447045366),
-after PR #6 merged, confirmed all six.
+after PR #6 merged, confirmed **M1-R1–R5 satisfied** and explicitly found
+**M1-R6 — not satisfied**, because this milestone-record file was absent from
+merged `main` at that time (`17883d9`). M1-R6 is not QA-verified by either
+pass: it is delivered by this PR, and QA will verdict it after this PR
+merges.
 
 ## Decisions
 
