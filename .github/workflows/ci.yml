@@ -60,10 +60,8 @@ jobs:
 
           console.log('engine smoke OK');
           EOF
-      - name: Unit tests (when present)
-        run: |
-          if ls test/*.js test/*.mjs 2>/dev/null | grep -q .; then
-            node --test
-          else
-            echo "no test files yet (M1-R5, owned by QA)"
-          fi
+      # Unconditional: `node --test` exits 0 when no test files exist yet
+      # (M1-R5 suite is owned by QA), and a per-extension file check under
+      # `pipefail` skipped single-extension suites — see PR #2 review.
+      - name: Unit tests
+        run: node --test
