@@ -8,6 +8,7 @@
     ".": "./src/engine.js"
   },
   "scripts": {
+    "start": "node src/cli.js",
     "test": "node --test"
   },
   "license": "MIT",
