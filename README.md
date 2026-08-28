@@ -1,14 +1,17 @@
 # numberguess
 
-A pure, dependency-free game engine for a number-guessing game. `src/engine.js`
-is a single Node ESM module with no I/O and no UI — just deterministic state
-transitions you can drive from a script, a CLI, or a future front end.
+A number-guessing game: a pure, dependency-free engine (`src/engine.js`) plus
+an interactive terminal CLI (`src/cli.js`) that plays it. The engine is a
+single Node ESM module with no I/O and no UI — just deterministic state
+transitions you can drive from a script, the CLI, or a future front end.
 
-This is the cycle-1 deliverable of Radius Red's [engineering-loop demo](docs/introduction.md):
-a small four-agent team (build → review → test → docs) shipping a real feature
-through reviewed GitHub PRs. The full record of how this milestone was built —
-decisions, trade-offs, rejected alternatives — is in
-[`docs/milestones/1-core-engine.md`](docs/milestones/1-core-engine.md).
+This is the cycle-1 and cycle-2 deliverable of Radius Red's
+[engineering-loop demo](docs/introduction.md): a small four-agent team
+(build → review → test → docs) shipping real features through reviewed
+GitHub PRs. The full record of how each milestone was built — decisions,
+trade-offs, rejected alternatives — is in
+[`docs/milestones/1-core-engine.md`](docs/milestones/1-core-engine.md) and
+[`docs/milestones/2-interactive-cli.md`](docs/milestones/2-interactive-cli.md).
 
 ## Install & run
 
@@ -17,16 +20,60 @@ Zero runtime dependencies, no build step.
 ```bash
 git clone https://github.com/radiusred/numberguess.git
 cd numberguess
+npm start
+```
+
+`npm start` launches the interactive CLI — see [Play](#play) below. To run
+the test suite instead:
+
+```bash
 npm test
 ```
 
 `npm test` runs `node --test`, which discovers and runs everything under
-`test/` (currently 21 tests covering the full public API — see
-[Tests](#tests) below).
+`test/` (currently 34 tests: 21 engine, 13 CLI — see [Tests](#tests) below).
 
-## Quick start
+## Play
 
-The package isn't published, so import the module by path:
+```bash
+npm start
+```
+
+Starts a fresh game (secret integer between 1 and 100) and prompts
+`Your guess: ` in a loop:
+
+```
+I'm thinking of a number between 1 and 100. Can you guess it?
+Your guess: 50
+Too high!
+Your guess: 25
+Too low!
+Your guess: 37
+Correct! You got it in 3 attempts.
+Play again? (y/n) n
+Thanks for playing!
+```
+
+- Feedback after each guess is `Too low!`, `Too high!`, or the win message.
+- Bad input (blank, non-integer, or out of range) prints a friendly message
+  and re-prompts — it never crashes the process.
+- On a correct guess, `Play again? (y/n)` — `y`/`yes` starts a fresh game;
+  anything else, or EOF/Ctrl-D at any prompt, exits cleanly with status 0.
+
+For a deterministic secret (useful for scripting or testing), set
+`NUMBERGUESS_SEED` to an integer:
+
+```bash
+NUMBERGUESS_SEED=1 npm start
+```
+
+The CLI (`src/cli.js`) is a thin readline layer over the engine's `newGame`
+and `guess` — the engine itself is untouched by the CLI.
+
+## Programmatic usage
+
+To drive the engine yourself instead of playing via the CLI — the package
+isn't published, so import the module by path:
 
 ```js
 import { newGame, guess, RESULTS } from './src/engine.js';
@@ -123,10 +170,15 @@ hardcode strings:
 npm test
 ```
 
-Runs the full suite via `node --test` (`test/engine.test.js`): seed
-determinism, a full play-through with attempt counting, `too_low`/`too_high`
-feedback, state immutability, and every documented error path for both
-`newGame` and `guess`.
+Runs the full suite via `node --test`:
+
+- `test/engine.test.js` (21 tests) — seed determinism, a full play-through
+  with attempt counting, `too_low`/`too_high` feedback, state immutability,
+  and every documented error path for both `newGame` and `guess`.
+- `test/cli.test.js` (13 tests) — unit tests for the CLI's pure input
+  helpers, plus spawn-based end-to-end runs over piped stdin covering a full
+  game with bad-input re-prompts, replay, and clean exit on EOF at the first
+  prompt and mid-game.
 
 ## License
 
