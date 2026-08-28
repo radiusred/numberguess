@@ -23,7 +23,8 @@ The build was chartered as task
 [#10](https://github.com/radiusred/numberguess/issues/10) and landed as
 [PR #12](https://github.com/radiusred/numberguess/pull/12), approved by
 Checky at head `fbdc9d5` and rebase-merged to `main` via
-`gh codecrew task finish 10`, producing merge commit `986de50`. `npm test`
+`gh codecrew task finish 10`, landing as `986de50` — the rebased tip commit
+on `main` (single-parent; rebase-merge, not a merge commit). `npm test`
 passed 34/34 (21 engine, 13 CLI) both pre-merge and on merged `main`. QA
 (Testy) verdicted all four requirements against merged `main` (`986de50`) on
 2026-08-28, finding **M2-R1–R4 satisfied**.
