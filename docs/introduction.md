@@ -21,9 +21,11 @@ suite's play-through case in `test/engine.test.js`.
 
 ## How it was built
 
-Cycle 1 ran build → review → test → docs as four small, independently
+Cycle 1 ran build → review → test → docs as three small, independently
 reviewed GitHub PRs, each gated by the CodeCrew protocol (green CI, a
-holder's approval, no unresolved `cc:needs-decision` gate) before merge:
+holder's approval, no unresolved `cc:needs-decision` gate) before merge —
+review is a role/gate applied to each of those PRs, not a fourth PR of its
+own:
 
 1. **Build** — [PR #2](https://github.com/radiusred/numberguess/pull/2)
    landed `src/engine.js`.

@@ -32,12 +32,18 @@ The package isn't published, so import the module by path:
 import { newGame, guess, RESULTS } from './src/engine.js';
 
 let state = newGame(1, 100, 42); // seeded, so the secret is reproducible
+let lo = state.min;
+let hi = state.max;
 let result;
 
 do {
-  const attempt = Math.floor((state.min + state.max) / 2); // simple midpoint strategy
+  // guess() doesn't narrow state.min/state.max itself, so the caller tracks
+  // its own search bounds and narrows them from each result.
+  const attempt = Math.floor((lo + hi) / 2);
   ({ state, result } = guess(state, attempt));
   console.log(`guessed ${attempt} -> ${result}`);
+  if (result === RESULTS.TOO_LOW) lo = attempt + 1;
+  else if (result === RESULTS.TOO_HIGH) hi = attempt - 1;
 } while (result !== RESULTS.CORRECT);
 
 console.log(`won in ${state.attempts} attempts`);
@@ -91,7 +97,13 @@ Returns:
 A correct guess sets `state.status` to `'won'`.
 
 Throws:
-- `TypeError` — `state` isn't a valid game state, or `n` is not an integer.
+- `TypeError` — `state` is nullish or has `status === undefined`, or `n` is
+  not an integer. This check is narrow: it does not validate the rest of
+  `state`'s shape, so a malformed-but-`status`-bearing object (e.g.
+  `{ status: 'playing' }`, missing `min`/`max`/`secret`/`attempts`) is
+  accepted and produces garbage results (e.g. `attempts: NaN`) rather than
+  throwing. Always pass a `state` returned by `newGame` or a previous
+  `guess` call.
 - `RangeError` — `n` is outside `[state.min, state.max]`.
 - `Error` — the game is already won (`state.status !== 'playing'`); start a
   new game instead of continuing to guess.
