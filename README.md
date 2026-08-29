@@ -5,13 +5,15 @@ an interactive terminal CLI (`src/cli.js`) that plays it. The engine is a
 single Node ESM module with no I/O and no UI — just deterministic state
 transitions you can drive from a script, the CLI, or a future front end.
 
-This is the cycle-1 and cycle-2 deliverable of Radius Red's
+This is the cycle-1, cycle-2 and cycle-3 deliverable of Radius Red's
 [engineering-loop demo](docs/introduction.md): a small four-agent team
 (build → review → test → docs) shipping real features through reviewed
 GitHub PRs. The full record of how each milestone was built — decisions,
 trade-offs, rejected alternatives — is in
-[`docs/milestones/1-core-engine.md`](docs/milestones/1-core-engine.md) and
-[`docs/milestones/2-interactive-cli.md`](docs/milestones/2-interactive-cli.md).
+[`docs/milestones/1-core-engine.md`](docs/milestones/1-core-engine.md),
+[`docs/milestones/2-interactive-cli.md`](docs/milestones/2-interactive-cli.md)
+and
+[`docs/milestones/3-selectable-difficulty.md`](docs/milestones/3-selectable-difficulty.md).
 
 ## Install & run
 
@@ -31,7 +33,7 @@ npm test
 ```
 
 `npm test` runs `node --test`, which discovers and runs everything under
-`test/` (currently 34 tests: 21 engine, 13 CLI — see [Tests](#tests) below).
+`test/` (currently 45 tests: 21 engine, 24 CLI — see [Tests](#tests) below).
 
 ## Play
 
@@ -39,26 +41,53 @@ npm test
 npm start
 ```
 
-Starts a fresh game (secret integer between 1 and 100) and prompts
-`Your guess: ` in a loop:
+Before each game, choose a difficulty:
 
 ```
-I'm thinking of a number between 1 and 100. Can you guess it?
-Your guess: 50
-Too high!
-Your guess: 25
+Choose a difficulty:
+  1) Easy (1-10)
+  2) Medium (1-100)
+  3) Hard (1-1000)
+Difficulty:
+```
+
+Answer with the menu number (`1`/`2`/`3`) or the level name
+(`easy`/`medium`/`hard`, case-insensitive, whitespace-trimmed). Medium is
+the original default range (1–100), so choosing it reproduces the
+pre-difficulty behaviour exactly. An unrecognised answer re-prints a
+friendly message and re-asks — it never reaches the game engine unvalidated.
+
+Once a difficulty is chosen, the game starts with that inclusive range and
+prompts `Your guess: ` in a loop:
+
+```
+Choose a difficulty:
+  1) Easy (1-10)
+  2) Medium (1-100)
+  3) Hard (1-1000)
+Difficulty: 1
+I'm thinking of a number between 1 and 10. Can you guess it?
+Your guess: 5
 Too low!
-Your guess: 37
+Your guess: 8
+Too high!
+Your guess: 7
 Correct! You got it in 3 attempts.
 Play again? (y/n) n
 Thanks for playing!
 ```
 
+Choosing `y`/`yes` to "Play again?" asks for a difficulty afresh — each game
+can be a different level.
+
+- An unrecognised difficulty prints a friendly message and re-asks; it never
+  starts a game with an unvalidated range.
 - Feedback after each guess is `Too low!`, `Too high!`, or the win message.
 - Bad input (blank, non-integer, or out of range) prints a friendly message
   and re-prompts — it never crashes the process.
-- On a correct guess, `Play again? (y/n)` — `y`/`yes` starts a fresh game;
-  anything else, or EOF/Ctrl-D at any prompt, exits cleanly with status 0.
+- On a correct guess, `Play again? (y/n)` — `y`/`yes` starts a fresh game
+  (asking for difficulty again first); anything else, or EOF/Ctrl-D at any
+  prompt (including the difficulty prompt), exits cleanly with status 0.
 
 For a deterministic secret (useful for scripting or testing), set
 `NUMBERGUESS_SEED` to an integer:
@@ -175,10 +204,13 @@ Runs the full suite via `node --test`:
 - `test/engine.test.js` (21 tests) — seed determinism, a full play-through
   with attempt counting, `too_low`/`too_high` feedback, state immutability,
   and every documented error path for both `newGame` and `guess`.
-- `test/cli.test.js` (13 tests) — unit tests for the CLI's pure input
-  helpers, plus spawn-based end-to-end runs over piped stdin covering a full
-  game with bad-input re-prompts, replay, and clean exit on EOF at the first
-  prompt and mid-game.
+- `test/cli.test.js` (24 tests) — unit tests for the CLI's pure input
+  helpers, including `parseDifficulty`, `formatDifficultyPrompt` and the
+  `DIFFICULTIES` table (Medium fixed at 1–100), plus spawn-based end-to-end
+  runs over piped stdin covering a full game at each difficulty, bad-input
+  and unrecognised-difficulty re-prompts, a fresh difficulty prompt on
+  replay, and clean exit on EOF at the difficulty prompt, the first guess
+  prompt, and mid-game.
 
 ## License
 
