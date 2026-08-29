@@ -14,7 +14,16 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { newGame, RESULTS } from '../src/engine.js';
-import { parseGuess, feedbackFor, parsePlayAgain, winMessage, seedFromEnv } from '../src/cli.js';
+import {
+  parseGuess,
+  feedbackFor,
+  parsePlayAgain,
+  winMessage,
+  seedFromEnv,
+  parseDifficulty,
+  formatDifficultyPrompt,
+  DIFFICULTIES,
+} from '../src/cli.js';
 
 const CLI = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 
@@ -127,16 +136,81 @@ describe('seedFromEnv', () => {
   });
 });
 
+describe('DIFFICULTIES', () => {
+  test('offers at least three levels with distinct inclusive ranges', () => {
+    assert.ok(DIFFICULTIES.length >= 3);
+    const names = DIFFICULTIES.map((d) => d.name);
+    assert.deepEqual(names, ['Easy', 'Medium', 'Hard']);
+    for (const d of DIFFICULTIES) {
+      assert.ok(Number.isInteger(d.min) && Number.isInteger(d.max) && d.min < d.max);
+    }
+  });
+
+  test('Medium reproduces the historical default range exactly (1–100)', () => {
+    const medium = DIFFICULTIES.find((d) => d.name === 'Medium');
+    assert.deepEqual({ min: medium.min, max: medium.max }, { min: 1, max: 100 });
+  });
+
+  test('Easy is 1–10 and Hard is 1–1000', () => {
+    const easy = DIFFICULTIES.find((d) => d.name === 'Easy');
+    const hard = DIFFICULTIES.find((d) => d.name === 'Hard');
+    assert.deepEqual({ min: easy.min, max: easy.max }, { min: 1, max: 10 });
+    assert.deepEqual({ min: hard.min, max: hard.max }, { min: 1, max: 1000 });
+  });
+});
+
+describe('parseDifficulty', () => {
+  test('accepts a menu number and returns that level with its bounds', () => {
+    assert.deepEqual(parseDifficulty('1'), { ok: true, value: DIFFICULTIES[0] });
+    assert.deepEqual(parseDifficulty('2'), { ok: true, value: DIFFICULTIES[1] });
+    assert.deepEqual(parseDifficulty('  3  '), { ok: true, value: DIFFICULTIES[2] });
+  });
+
+  test('accepts a level name, case-insensitive and trimmed', () => {
+    assert.equal(parseDifficulty('easy').value, DIFFICULTIES[0]);
+    assert.equal(parseDifficulty('Medium').value, DIFFICULTIES[1]);
+    assert.equal(parseDifficulty(' HARD ').value, DIFFICULTIES[2]);
+  });
+
+  test('rejects blank input with a friendly re-prompt message', () => {
+    for (const input of ['', '   ', '\t', null, undefined]) {
+      const r = parseDifficulty(input);
+      assert.equal(r.ok, false);
+      assert.match(r.message, /choose a difficulty/i);
+    }
+  });
+
+  test('rejects unrecognised input without crashing', () => {
+    for (const input of ['0', '4', 'medi', 'insane', '2.0', 'e']) {
+      const r = parseDifficulty(input);
+      assert.equal(r.ok, false);
+      assert.match(r.message, /isn't a difficulty/);
+    }
+  });
+});
+
+describe('formatDifficultyPrompt', () => {
+  test('lists every level with its range, derived from DIFFICULTIES', () => {
+    const prompt = formatDifficultyPrompt();
+    for (const d of DIFFICULTIES) {
+      assert.match(prompt, new RegExp(`${d.key}\\) ${d.name} \\(${d.min}-${d.max}\\)`));
+    }
+    assert.match(prompt, /Difficulty: $/);
+  });
+});
+
 describe('CLI end-to-end (spawned with a seeded secret)', () => {
-  test('full round: feedback, bad-input re-prompts, attempt count, clean exit (M2-R1/R2/R3)', async () => {
+  test('full round on Medium: feedback, bad-input re-prompts, attempt count, clean exit (M2-R1/R2/R3, M4-R1/R3)', async () => {
     const seed = seedWithInteriorSecret(1, 100);
     const { secret } = newGame(1, 100, seed);
     const { code, stdout, stderr } = await runCli(
-      [String(secret - 1), 'abc', '', '101', String(secret + 1), String(secret), 'n'],
+      ['2', String(secret - 1), 'abc', '', '101', String(secret + 1), String(secret), 'n'],
       { NUMBERGUESS_SEED: String(seed) }
     );
     assert.equal(code, 0);
     assert.equal(stderr, '');
+    assert.match(stdout, /Choose a difficulty:/);
+    // Medium reproduces the historical default range exactly.
     assert.match(stdout, /thinking of a number between 1 and 100/);
     assert.match(stdout, /Too low!/);
     assert.match(stdout, /isn't a whole number/);
@@ -149,29 +223,71 @@ describe('CLI end-to-end (spawned with a seeded secret)', () => {
     assert.match(stdout, /Thanks for playing!/);
   });
 
-  test('accepting a replay starts a fresh game (M2-R3)', async () => {
+  test('Easy selects the 1–10 range and a guess outside it is re-prompted (M4-R1/R3)', async () => {
+    const seed = seedWithInteriorSecret(1, 10);
+    const { secret } = newGame(1, 10, seed);
+    const { code, stdout, stderr } = await runCli(
+      ['easy', '11', String(secret), 'n'],
+      { NUMBERGUESS_SEED: String(seed) }
+    );
+    assert.equal(code, 0);
+    assert.equal(stderr, '');
+    assert.match(stdout, /thinking of a number between 1 and 10/);
+    assert.match(stdout, /11 is out of range — guess between 1 and 10/);
+    assert.match(stdout, /Correct! You got it in 1 attempt\./);
+  });
+
+  test('Hard selects the 1–1000 range (M4-R1/R3)', async () => {
+    const seed = seedWithInteriorSecret(1, 1000);
+    const { secret } = newGame(1, 1000, seed);
+    const { code, stdout } = await runCli(['3', String(secret), 'n'], {
+      NUMBERGUESS_SEED: String(seed),
+    });
+    assert.equal(code, 0);
+    assert.match(stdout, /thinking of a number between 1 and 1000/);
+    assert.match(stdout, /Correct! You got it in 1 attempt\./);
+  });
+
+  test('an unrecognised difficulty re-prompts without crashing, then proceeds (M4-R2)', async () => {
+    const seed = seedWithInteriorSecret(1, 100);
+    const { secret } = newGame(1, 100, seed);
+    const { code, stdout, stderr } = await runCli(
+      ['insane', '2', String(secret), 'n'],
+      { NUMBERGUESS_SEED: String(seed) }
+    );
+    assert.equal(code, 0);
+    assert.equal(stderr, '');
+    assert.match(stdout, /"insane" isn't a difficulty/);
+    assert.match(stdout, /thinking of a number between 1 and 100/);
+    assert.match(stdout, /Correct! You got it in 1 attempt\./);
+  });
+
+  test('accepting a replay re-prompts for difficulty and starts a fresh game (M2-R3, M4-R1)', async () => {
     const seed = seedWithInteriorSecret(1, 100);
     const { secret } = newGame(1, 100, seed);
     const { code, stdout } = await runCli(
-      [String(secret), 'y', String(secret), 'no'],
+      ['2', String(secret), 'y', '2', String(secret), 'no'],
       { NUMBERGUESS_SEED: String(seed) }
     );
     assert.equal(code, 0);
     const wins = stdout.match(/Correct! You got it in 1 attempt\./g) ?? [];
     assert.equal(wins.length, 2, 'expected two single-attempt wins across the replay');
+    const prompts = stdout.match(/Choose a difficulty:/g) ?? [];
+    assert.equal(prompts.length, 2, 'expected a difficulty prompt before each game');
   });
 
-  test('EOF at the first prompt exits cleanly with status 0 (M2-R3)', async () => {
+  test('EOF at the difficulty prompt exits cleanly with status 0 before any game (M4-R1)', async () => {
     const { code, stdout, stderr } = await runCli([]);
     assert.equal(code, 0);
     assert.equal(stderr, '');
-    assert.match(stdout, /thinking of a number between 1 and 100/);
+    assert.match(stdout, /Choose a difficulty:/);
+    assert.doesNotMatch(stdout, /thinking of a number/);
   });
 
   test('EOF mid-game (after a wrong guess) still exits with status 0 (M2-R2/R3)', async () => {
     const seed = seedWithInteriorSecret(1, 100);
     const { secret } = newGame(1, 100, seed);
-    const { code, stderr } = await runCli([String(secret - 1)], {
+    const { code, stderr } = await runCli(['2', String(secret - 1)], {
       NUMBERGUESS_SEED: String(seed),
     });
     assert.equal(code, 0);
