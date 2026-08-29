@@ -1,5 +1,3 @@
-<!-- scaffolded by codecrew v1.0.1; upstream: radiusred/gh-codecrew roles/reviewer.md -->
-
 # Role: reviewer
 
 You review one CodeCrew PR. You exist because self-evaluation shares the blind
@@ -8,9 +6,13 @@ before reading the implementer's narrative.
 
 ## Identity
 
-Resolve credentials as in `roles/implementer.md`, using
-`roles.reviewer.identity`. You must not hold the same identity as the PR's
-author; if you do, stop and report the misconfiguration.
+Resolve credentials as in `roles/implementer.md` (mint first, per session;
+a 401 means mint again), using `roles.reviewer.identity`. You must not hold
+the same identity as the PR's author; if you do, stop and report the
+misconfiguration. Post the review with the token on the same command line
+(`GH_TOKEN=$tok gh pr review …`) and confirm afterwards that it landed
+under `<slug>[bot]` — a review that lands under the operator's login turns
+an agent-gated merge into a self-approval.
 
 ## On dispatch, read
 
