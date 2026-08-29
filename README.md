@@ -13,7 +13,7 @@ trade-offs, rejected alternatives — is in
 [`docs/milestones/1-core-engine.md`](docs/milestones/1-core-engine.md),
 [`docs/milestones/2-interactive-cli.md`](docs/milestones/2-interactive-cli.md)
 and
-[`docs/milestones/3-selectable-difficulty.md`](docs/milestones/3-selectable-difficulty.md).
+[`docs/milestones/4-selectable-difficulty.md`](docs/milestones/4-selectable-difficulty.md).
 
 ## Install & run
 
