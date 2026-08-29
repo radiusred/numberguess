@@ -53,29 +53,33 @@ were both missing. This document, the README update, and the
 
 1. **Difficulty encoded as a frozen, exported table (`DIFFICULTIES`) rather
    than inline constants in `main`.**
-   [Task #18's plan](https://github.com/radiusred/numberguess/issues/18):
-   each entry is `{key, name, min, max}`, and both `parseDifficulty` and
-   `formatDifficultyPrompt` derive from the same table, so the menu text and
-   the accepted answers can't drift apart. **Trade-off:** one more exported
-   symbol on the CLI's public surface. **Rejected:** hardcoding the menu
-   string and the accepted-answer set separately — the M2 CLI already
-   established the pattern of deriving prompts from a single source of
-   truth (`parseGuess`'s bounds messages), and duplicating it here would
-   reopen the drift class that pattern exists to close.
+   [Task #18's plan](https://github.com/radiusred/numberguess/issues/18) and
+   [PR #20's description](https://github.com/radiusred/numberguess/pull/20):
+   each entry is `{key, name, min, max}` (Easy `1-10`, Medium `1-100`, Hard
+   `1-1000`), and `formatDifficultyPrompt` builds the menu text from this
+   same table "so prompt and options never drift." **Trade-off / rejected
+   alternative:** not recorded — the plan states the chosen table design
+   directly; no comment or PR text weighs it against inline constants or a
+   separately-hardcoded menu, so no rejected alternative is claimed here.
+   Undocumented, not inferred.
 
-2. **`parseDifficulty` mirrors `parseGuess`/`parsePlayAgain`'s
-   `{ok, value|message}` shape exactly.**
-   [Task #18's plan](https://github.com/radiusred/numberguess/issues/18):
+2. **`parseDifficulty` follows the same pure/exported/tested pattern as
+   `parseGuess` and `parsePlayAgain`, returning `parseGuess`'s
+   `{ok, value|message}` shape — not `parsePlayAgain`'s.**
+   [Task #18's plan](https://github.com/radiusred/numberguess/issues/18) and
+   [PR #20's description](https://github.com/radiusred/numberguess/pull/20):
    a recognised choice (menu number `1`/`2`/`3` or level name,
    case-insensitive, trimmed) returns `{ok: true, value: <difficulty>}`;
-   anything else returns `{ok: false, message}`, so the same re-prompt loop
-   shape used for guesses applies unchanged to difficulty selection, and the
-   engine is never called with an unvalidated range. **Trade-off:** none
-   material — this is the existing helper contract, reused rather than
-   redesigned. **Rejected:** throwing on invalid input and catching it in
-   `main` — the existing helpers already established re-prompt-via-return-
-   value as the CLI's error-handling convention; introducing exceptions here
-   would be a second, inconsistent pattern for the same class of problem.
+   anything else returns `{ok: false, message}`. `parsePlayAgain` itself
+   returns a plain boolean ([`src/cli.js`](../../src/cli.js), not the
+   `{ok, ...}` shape), so "mirrors `parseGuess`/`parsePlayAgain`" describes
+   the shared pattern — pure, exported, tested, validated before the engine
+   ever sees it — not an identical return type across all three; the
+   `{ok, value|message}` shape specifically comes from `parseGuess`.
+   **Trade-off:** none material — reuses `parseGuess`'s existing contract
+   rather than inventing a new one. **Rejected:** not recorded — no
+   alternative to the return-value pattern (e.g. throwing on invalid input)
+   is documented as considered.
 
 3. **Medium's bounds fixed at exactly 1–100 to reproduce the pre-M4
    default byte-for-byte, and covered by a dedicated unit assertion.**
