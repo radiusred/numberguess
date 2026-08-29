@@ -5,10 +5,15 @@
  * ./engine.js; this file only translates lines of input into engine calls
  * and engine results into printed feedback.
  *
- * Input handling is split into pure, exported helpers (parseGuess,
- * feedbackFor, parsePlayAgain, winMessage) so tests can cover them without
- * driving readline. The interactive loop only starts when this file is the
- * entry module, so importing it has no side effects.
+ * Input handling is split into pure, exported helpers (parseDifficulty,
+ * parseGuess, feedbackFor, parsePlayAgain, winMessage) so tests can cover
+ * them without driving readline. The interactive loop only starts when this
+ * file is the entry module, so importing it has no side effects.
+ *
+ * Before each game the player picks a difficulty (see DIFFICULTIES) that sets
+ * the inclusive guessing range; Medium is the historical 1–100 default. The
+ * chosen range flows through newGame, so the opening prompt, bounds-checking
+ * and feedback all reflect it — the engine is untouched.
  *
  * Set NUMBERGUESS_SEED to an integer for a deterministic secret (used by
  * the e2e tests; ignored when absent or not an integer).
@@ -85,6 +90,55 @@ export function parsePlayAgain(input) {
 }
 
 /**
+ * Selectable difficulty levels. Each maps to an inclusive [min, max] guessing
+ * range. Order is the menu order; `key` is the menu number the player types.
+ * Medium is exactly the historical default (1–100), so selecting it
+ * reproduces the pre-difficulty behaviour byte-for-byte.
+ * @type {ReadonlyArray<{key: string, name: string, min: number, max: number}>}
+ */
+export const DIFFICULTIES = Object.freeze([
+  Object.freeze({ key: '1', name: 'Easy', min: 1, max: 10 }),
+  Object.freeze({ key: '2', name: 'Medium', min: 1, max: 100 }),
+  Object.freeze({ key: '3', name: 'Hard', min: 1, max: 1000 }),
+]);
+
+/**
+ * Parse one line of player input into a difficulty selection. Pure and
+ * exported, mirroring parseGuess/parsePlayAgain, so the engine is never
+ * reached with an unvalidated range: unrecognised input returns a friendly
+ * re-prompt line instead.
+ *
+ * A choice matches on its menu number ("1"/"2"/"3") or its level name
+ * ("easy"/"medium"/"hard"), case-insensitive and whitespace-trimmed.
+ *
+ * @param {string | null | undefined} input raw line from the prompt
+ * @returns {{ok: true, value: {key: string, name: string, min: number, max: number}} | {ok: false, message: string}}
+ */
+export function parseDifficulty(input) {
+  const trimmed = (input ?? '').trim();
+  const options = DIFFICULTIES.map((d) => `${d.key} (${d.name})`).join(', ');
+  if (trimmed === '') {
+    return { ok: false, message: `Please choose a difficulty: ${options}.` };
+  }
+  const needle = trimmed.toLowerCase();
+  const match = DIFFICULTIES.find((d) => d.key === needle || d.name.toLowerCase() === needle);
+  if (!match) {
+    return { ok: false, message: `"${trimmed}" isn't a difficulty — choose ${options}.` };
+  }
+  return { ok: true, value: match };
+}
+
+/**
+ * Build the difficulty menu prompt from DIFFICULTIES, so the prompt and the
+ * accepted options never drift apart.
+ * @returns {string}
+ */
+export function formatDifficultyPrompt() {
+  const lines = DIFFICULTIES.map((d) => `  ${d.key}) ${d.name} (${d.min}-${d.max})`);
+  return `Choose a difficulty:\n${lines.join('\n')}\nDifficulty: `;
+}
+
+/**
  * Resolve NUMBERGUESS_SEED from an env object: an integer seed, or
  * undefined (random secret) when absent or malformed.
  *
@@ -143,10 +197,24 @@ export async function main({ input = process.stdin, output = process.stdout, env
     output.write(prompt);
     return lines.next();
   };
+  // Prompt for a difficulty, re-prompting on unrecognised input. Returns the
+  // chosen difficulty, or null on EOF (a normal way to leave before a game
+  // starts), matching the guess loop's EOF handling.
+  const askDifficulty = async () => {
+    for (;;) {
+      const answer = await ask(formatDifficultyPrompt());
+      if (answer === null) return null;
+      const parsed = parseDifficulty(answer);
+      if (parsed.ok) return parsed.value;
+      output.write(`${parsed.message}\n`);
+    }
+  };
   try {
     let playing = true;
     while (playing) {
-      let state = newGame(1, 100, seed);
+      const difficulty = await askDifficulty();
+      if (difficulty === null) return 0;
+      let state = newGame(difficulty.min, difficulty.max, seed);
       output.write(`I'm thinking of a number between ${state.min} and ${state.max}. Can you guess it?\n`);
       let won = false;
       while (!won) {
