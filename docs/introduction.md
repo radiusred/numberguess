@@ -68,7 +68,7 @@ M1, the readline input-queue and seed-hook decisions in M2, and the
 difficulty-table and ROADMAP-numbering decisions in M4 — is in
 [`docs/milestones/1-core-engine.md`](milestones/1-core-engine.md),
 [`docs/milestones/2-interactive-cli.md`](milestones/2-interactive-cli.md) and
-[`docs/milestones/3-selectable-difficulty.md`](milestones/3-selectable-difficulty.md).
+[`docs/milestones/4-selectable-difficulty.md`](milestones/4-selectable-difficulty.md).
 
 ## What's next
 

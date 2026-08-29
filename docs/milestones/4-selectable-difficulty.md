@@ -110,7 +110,7 @@ were both missing. This document, the README update, and the
    milestone's task list (#16, #18, #19) was asked to add a row for #15
    itself — M4-R4's ROADMAP clause names only the #11/"M3" row (Decision 4),
    and this task's own dispatch said to verify that row and stop. This
-   record adds the missing #15 row anyway (`[Done](3-selectable-difficulty.md)`),
+   record adds the missing #15 row anyway (`[Done](4-selectable-difficulty.md)`),
    under the doc-synthesizer contract's unconditional obligation to flip the
    milestone's ROADMAP row to `Done` in the same PR as the record — "no
    other seat will." **Trade-off:** goes slightly beyond the letter of this
